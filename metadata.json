@@ -1,0 +1,5 @@
+{
+  "name": "FinTrack - Gestor Financeiro",
+  "description": "Um gestor financeiro completo com controle de entradas, saídas, calendário de pagamentos e gestão de contas bancárias.",
+  "requestFramePermissions": []
+}
