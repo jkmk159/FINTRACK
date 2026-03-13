@@ -85,9 +85,13 @@ export default function App() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/categories');
-      const data = await res.json();
-      setCategories(data);
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      setCategories(data || []);
     } catch (error) {
       console.error('Fetch categories error:', error);
     }
@@ -96,9 +100,13 @@ export default function App() {
   const fetchBanks = async () => {
     try {
       console.log('Fetching banks...');
-      const res = await fetch('/api/banks', { cache: 'no-store' });
-      const data = await res.json();
-      setBanks(data);
+      const { data, error } = await supabase
+        .from('banks')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      setBanks(data || []);
     } catch (error) {
       console.error('Fetch banks error:', error);
     }
@@ -107,42 +115,93 @@ export default function App() {
   const fetchTransactions = async () => {
     try {
       console.log('Fetching transactions...');
-      const res = await fetch('/api/transactions', { cache: 'no-store' });
-      const data = await res.json();
-      setTransactions(data);
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*, banks(name), categories(name)')
+        .order('date', { ascending: false })
+        .order('id', { ascending: false });
+      
+      if (error) throw error;
+
+      // Map the joined data to match the previous structure
+      const formattedData = data?.map(t => ({
+        ...t,
+        bank_name: t.banks?.name,
+        category_name: t.categories?.name
+      })) || [];
+
+      setTransactions(formattedData);
     } catch (error) {
       console.error('Fetch transactions error:', error);
     }
   };
 
   const handleConfirmTransaction = async (id: number) => {
-    await fetch(`/api/transactions/${id}/confirm`, { method: 'PATCH' });
-    fetchTransactions();
-    fetchBanks();
+    try {
+      const transaction = transactions.find(t => t.id === id);
+      if (!transaction || transaction.status === 'confirmed') return;
+
+      // Update transaction status
+      const { error: updateError } = await supabase
+        .from('transactions')
+        .update({ status: 'confirmed' })
+        .eq('id', id);
+      
+      if (updateError) throw updateError;
+
+      // Update bank balance
+      if (transaction.bank_id) {
+        const bank = banks.find(b => b.id === transaction.bank_id);
+        if (bank) {
+          const adjustment = transaction.type === 'income' ? transaction.amount : -transaction.amount;
+          const { error: bankError } = await supabase
+            .from('banks')
+            .update({ balance: bank.balance + adjustment })
+            .eq('id', bank.id);
+          
+          if (bankError) throw bankError;
+        }
+      }
+
+      fetchTransactions();
+      fetchBanks();
+    } catch (error) {
+      console.error('Confirm error:', error);
+    }
   };
 
   const handleDeleteTransaction = async (id: number | null) => {
     if (id === null) return;
     
     try {
-      console.log(`Deleting transaction ${id}...`);
-      const res = await fetch(`/api/transactions/${id}`, { 
-        method: 'DELETE'
-      });
-      
-      if (res.ok) {
-        console.log('Deletion successful, refreshing data...');
-        await fetchTransactions();
-        await fetchBanks();
-      } else {
-        const errorData = await res.json();
-        console.error('Deletion failed:', errorData);
-        alert(`Erro ao excluir: ${errorData.error || 'Erro desconhecido'}`);
+      const transaction = transactions.find(t => t.id === id);
+      if (!transaction) return;
+
+      // Revert bank balance if confirmed
+      if (transaction.bank_id && transaction.status === 'confirmed') {
+        const bank = banks.find(b => b.id === transaction.bank_id);
+        if (bank) {
+          const adjustment = transaction.type === 'income' ? -transaction.amount : transaction.amount;
+          await supabase
+            .from('banks')
+            .update({ balance: bank.balance + adjustment })
+            .eq('id', bank.id);
+        }
       }
+
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      fetchTransactions();
+      fetchBanks();
       setTransactionToDelete(null);
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Erro de conexão ao excluir transação. Verifique sua internet.');
+      alert('Erro ao excluir transação.');
       setTransactionToDelete(null);
     }
   };
@@ -151,23 +210,32 @@ export default function App() {
     if (id === null) return;
     
     try {
-      console.log(`Deleting bank ${id}...`);
-      const res = await fetch(`/api/banks/${id}`, { 
-        method: 'DELETE'
-      });
+      // Check for transactions
+      const { count, error: countError } = await supabase
+        .from('transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('bank_id', id);
       
-      if (res.ok) {
-        console.log('Bank deletion successful, refreshing data...');
-        await fetchBanks();
-      } else {
-        const errorData = await res.json();
-        console.error('Bank deletion failed:', errorData);
-        alert(`Erro ao excluir banco: ${errorData.error || 'Erro desconhecido'}`);
+      if (countError) throw countError;
+
+      if (count && count > 0) {
+        alert("Não é possível excluir um banco que possui transações vinculadas.");
+        setBankToDelete(null);
+        return;
       }
+
+      const { error } = await supabase
+        .from('banks')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+
+      fetchBanks();
       setBankToDelete(null);
     } catch (error) {
       console.error('Bank delete error:', error);
-      alert('Erro de conexão ao excluir banco. Verifique sua internet.');
+      alert('Erro ao excluir banco.');
       setBankToDelete(null);
     }
   };
@@ -175,11 +243,15 @@ export default function App() {
   const handleDeleteCategory = async (id: number | null) => {
     if (id === null) return;
     try {
-      const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        fetchCategories();
-        setCategoryToDelete(null);
-      }
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+
+      fetchCategories();
+      setCategoryToDelete(null);
     } catch (error) {
       console.error('Delete category error:', error);
     }
@@ -1163,23 +1235,99 @@ function TransactionModal({ isOpen, onClose, onSuccess, banks, categories, editi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const url = editingTransaction ? `/api/transactions/${editingTransaction.id}` : '/api/transactions';
-    const method = editingTransaction ? 'PUT' : 'POST';
+    
+    try {
+      const amount = parseFloat(formData.amount);
+      const bankId = parseInt(formData.bank_id);
+      const categoryId = formData.category_id ? parseInt(formData.category_id) : null;
 
-    const body = {
-      ...formData,
-      amount: parseFloat(formData.amount),
-      bank_id: parseInt(formData.bank_id),
-      category_id: formData.category_id ? parseInt(formData.category_id) : null,
-      recurring: formData.isRecurring ? { months: parseInt(formData.recurringMonths) } : null
-    };
+      if (editingTransaction) {
+        // Revert old balance if it was confirmed
+        if (editingTransaction.bank_id && editingTransaction.status === 'confirmed') {
+          const oldBank = banks.find(b => b.id === editingTransaction.bank_id);
+          if (oldBank) {
+            const oldAdjustment = editingTransaction.type === 'income' ? -editingTransaction.amount : editingTransaction.amount;
+            await supabase
+              .from('banks')
+              .update({ balance: oldBank.balance + oldAdjustment })
+              .eq('id', oldBank.id);
+          }
+        }
 
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    onSuccess();
+        // Update transaction
+        const { error: updateError } = await supabase
+          .from('transactions')
+          .update({
+            type: formData.type,
+            amount,
+            description: formData.description,
+            date: formData.date,
+            bank_id: bankId,
+            status: formData.status,
+            category_id: categoryId
+          })
+          .eq('id', editingTransaction.id);
+        
+        if (updateError) throw updateError;
+
+        // Apply new balance if new status is confirmed
+        if (bankId && formData.status === 'confirmed') {
+          // Fetch bank again to get updated balance after revert
+          const { data: updatedBank } = await supabase.from('banks').select('balance').eq('id', bankId).single();
+          if (updatedBank) {
+            const newAdjustment = formData.type === 'income' ? amount : -amount;
+            await supabase
+              .from('banks')
+              .update({ balance: updatedBank.balance + newAdjustment })
+              .eq('id', bankId);
+          }
+        }
+      } else {
+        // Create new transaction(s)
+        const recurring_id = formData.isRecurring ? `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` : null;
+        const count = formData.isRecurring ? parseInt(formData.recurringMonths) : 1;
+        const startDate = new Date(formData.date);
+
+        for (let i = 0; i < count; i++) {
+          const currentDate = new Date(startDate);
+          currentDate.setMonth(startDate.getMonth() + i);
+          const dateStr = currentDate.toISOString().split('T')[0];
+          const currentStatus = i === 0 ? formData.status : 'pending';
+
+          const { error: insertError } = await supabase
+            .from('transactions')
+            .insert({
+              type: formData.type,
+              amount,
+              description: formData.description,
+              date: dateStr,
+              bank_id: bankId,
+              status: currentStatus,
+              category_id: categoryId,
+              recurring_id
+            });
+          
+          if (insertError) throw insertError;
+
+          // Update bank balance only if confirmed
+          if (bankId && currentStatus === 'confirmed') {
+            const { data: bank } = await supabase.from('banks').select('balance').eq('id', bankId).single();
+            if (bank) {
+              const adjustment = formData.type === 'income' ? amount : -amount;
+              await supabase
+                .from('banks')
+                .update({ balance: bank.balance + adjustment })
+                .eq('id', bankId);
+            }
+          }
+        }
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error('Transaction submit error:', error);
+      alert('Erro ao salvar transação.');
+    }
   };
 
   if (!isOpen) return null;
@@ -1395,19 +1543,29 @@ function BankModal({ isOpen, onClose, onSuccess, editingBank }: { isOpen: boolea
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const url = editingBank ? `/api/banks/${editingBank.id}` : '/api/banks';
-    const method = editingBank ? 'PUT' : 'POST';
-
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: formData.name,
-        balance: parseFloat(formData.balance || '0')
-      })
-    });
-    onSuccess();
-    setFormData({ name: '', balance: '' });
+    
+    try {
+      const balance = parseFloat(formData.balance || '0');
+      
+      if (editingBank) {
+        const { error } = await supabase
+          .from('banks')
+          .update({ name: formData.name, balance })
+          .eq('id', editingBank.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('banks')
+          .insert({ name: formData.name, balance });
+        if (error) throw error;
+      }
+      
+      onSuccess();
+      setFormData({ name: '', balance: '' });
+    } catch (error) {
+      console.error('Bank submit error:', error);
+      alert('Erro ao salvar banco.');
+    }
   };
 
   if (!isOpen) return null;
@@ -1474,15 +1632,26 @@ function CategoryModal({ isOpen, onClose, onSuccess, editingCategory }: { isOpen
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const url = editingCategory ? `/api/categories/${editingCategory.id}` : '/api/categories';
-    const method = editingCategory ? 'PUT' : 'POST';
-
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
-    });
-    onSuccess();
+    
+    try {
+      if (editingCategory) {
+        const { error } = await supabase
+          .from('categories')
+          .update(formData)
+          .eq('id', editingCategory.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('categories')
+          .insert(formData);
+        if (error) throw error;
+      }
+      
+      onSuccess();
+    } catch (error) {
+      console.error('Category submit error:', error);
+      alert('Erro ao salvar categoria.');
+    }
   };
 
   if (!isOpen) return null;
