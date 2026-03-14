@@ -881,16 +881,16 @@ function NavItem({ active, onClick, icon, label }: { active: boolean, onClick: (
 
 function StatCard({ label, value, icon, color, sublabel }: { label: string, value: number, icon: React.ReactNode, color: string, sublabel?: string }) {
   return (
-    <div className="bg-white p-5 sm:p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-      <div className={cn("w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0", color)}>
+    <div className="bg-white p-4 sm:p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow min-w-0">
+      <div className={cn("w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0", color)}>
         {React.cloneElement(icon as React.ReactElement, { size: 24 })}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-        <p className="text-lg sm:text-2xl font-black tracking-tight text-slate-900 break-all sm:break-normal">
+        <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+        <p className="text-base sm:text-2xl font-black tracking-tight text-slate-900 truncate">
           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
         </p>
-        {sublabel && <p className="text-[10px] text-slate-400 font-bold mt-0.5">{sublabel}</p>}
+        {sublabel && <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold mt-0.5">{sublabel}</p>}
       </div>
     </div>
   );
@@ -905,66 +905,55 @@ interface TransactionItemProps {
 
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete, onConfirm, onEdit }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 sm:p-4 rounded-2xl hover:bg-slate-50/80 transition-all group border border-transparent hover:border-slate-100">
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className={cn(
-          "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 relative shadow-sm transition-transform group-hover:scale-105",
-          transaction.type === 'income' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-        )}>
-          {transaction.type === 'income' ? <ArrowUpCircle size={28} /> : <ArrowDownCircle size={28} />}
+    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 sm:gap-x-6 gap-y-2 p-3 sm:p-4 rounded-2xl hover:bg-slate-50/80 transition-all group border border-transparent hover:border-slate-100">
+      {/* Icon - Column 1 */}
+      <div className={cn(
+        "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 relative shadow-sm transition-transform group-hover:scale-105",
+        transaction.type === 'income' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+      )}>
+        {transaction.type === 'income' ? <ArrowUpCircle size={28} /> : <ArrowDownCircle size={28} />}
+        {transaction.status === 'pending' && (
+          <div className="absolute -top-1 -right-1 bg-amber-400 text-white rounded-full p-1 border-2 border-white shadow-md">
+            <Clock size={12} />
+          </div>
+        )}
+      </div>
+
+      {/* Info - Column 2 */}
+      <div className="min-w-0 flex flex-col justify-center">
+        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+          <p className="font-black text-slate-800 text-sm sm:text-lg tracking-tight leading-tight truncate max-w-[120px] sm:max-w-none">
+            {transaction.description}
+          </p>
           {transaction.status === 'pending' && (
-            <div className="absolute -top-1 -right-1 bg-amber-400 text-white rounded-full p-1 border-2 border-white shadow-md">
-              <Clock size={12} />
-            </div>
+            <span className="text-[8px] sm:text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest whitespace-nowrap border border-amber-200">
+              Pendente
+            </span>
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <p className="font-black text-slate-800 text-base sm:text-lg tracking-tight leading-tight">{transaction.description}</p>
-            {transaction.status === 'pending' && (
-              <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest whitespace-nowrap border border-amber-200">Pendente</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400">
-            <span className="whitespace-nowrap">{format(parseISO(transaction.date), 'dd MMM yyyy', { locale: ptBR })}</span>
-            <span className="text-slate-200">•</span>
-            <span className="flex items-center gap-1.5 truncate max-w-[100px] sm:max-w-none">
-              <Wallet size={12} className="shrink-0 opacity-60" /> 
-              <span className="truncate">{transaction.bank_name || 'Sem banco'}</span>
-            </span>
-            {transaction.category_name && (
-              <>
-                <span className="text-slate-200">•</span>
-                <span className="flex items-center gap-1.5 truncate max-w-[100px] sm:max-w-none">
-                  <Tags size={12} className="shrink-0 opacity-60" /> 
-                  <span className="truncate">{transaction.category_name}</span>
-                </span>
-              </>
-            )}
-            {transaction.recurring_id && (
-              <>
-                <span className="text-slate-200">•</span>
-                <span className="flex items-center gap-1.5 text-indigo-500">
-                  <Repeat size={12} className="shrink-0" /> 
-                  <span className="hidden sm:inline">Recorrente</span>
-                </span>
-              </>
-            )}
-          </div>
+        <div className="flex items-center gap-2 text-[9px] sm:text-xs font-bold text-slate-400 overflow-hidden">
+          <span className="whitespace-nowrap">{format(parseISO(transaction.date), 'dd MMM yyyy', { locale: ptBR })}</span>
+          <span className="text-slate-200">•</span>
+          <span className="truncate max-w-[80px] sm:max-w-none">{transaction.bank_name || 'Sem banco'}</span>
+          {transaction.category_name && (
+            <>
+              <span className="text-slate-200">•</span>
+              <span className="truncate max-w-[80px] sm:max-w-none">{transaction.category_name}</span>
+            </>
+          )}
         </div>
       </div>
-      
-      <div className="flex items-center justify-between sm:justify-end gap-4 sm:pl-0 w-full sm:w-auto">
-        <div className="text-left sm:text-right flex-1 sm:flex-none">
-          <p className={cn(
-            "text-lg sm:text-2xl font-black whitespace-nowrap tracking-tighter",
-            transaction.type === 'income' ? "text-emerald-600" : "text-rose-600"
-          )}>
-            {transaction.type === 'income' ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount)}
-          </p>
-        </div>
+
+      {/* Amount and Actions - Column 3 */}
+      <div className="flex flex-col items-end justify-center gap-1">
+        <p className={cn(
+          "text-base sm:text-2xl font-black whitespace-nowrap tracking-tighter",
+          transaction.type === 'income' ? "text-emerald-600" : "text-rose-600"
+        )}>
+          {transaction.type === 'income' ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount)}
+        </p>
         
-        <div className="flex items-center gap-1 bg-slate-100/50 sm:bg-transparent p-1 sm:p-0 rounded-2xl border border-slate-200/50 sm:border-transparent">
+        <div className="flex items-center gap-0.5 sm:gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {transaction.status === 'pending' && (
             <button 
               onClick={(e) => {
@@ -972,10 +961,10 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete
                 e.stopPropagation();
                 onConfirm(transaction.id);
               }} 
-              className="p-3 text-emerald-600 hover:bg-emerald-100/80 rounded-xl transition-all active:scale-90"
+              className="p-1.5 sm:p-2 text-emerald-600 hover:bg-emerald-100/80 rounded-xl transition-all active:scale-90"
               title="Dar baixa"
             >
-              <CheckCircle2 size={22} />
+              <CheckCircle2 size={18} />
             </button>
           )}
           <button 
@@ -984,22 +973,21 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete
               e.stopPropagation();
               onEdit(transaction);
             }} 
-            className="p-3 text-blue-600 hover:bg-blue-100/80 rounded-xl transition-all active:scale-90"
+            className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-100/80 rounded-xl transition-all active:scale-90"
             title="Editar"
           >
-            <Edit2 size={22} />
+            <Edit2 size={18} />
           </button>
           <button 
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log(`Delete button clicked for transaction: ${transaction.id}`);
               onDelete(transaction.id);
             }} 
-            className="p-3 text-rose-600 hover:bg-rose-100/80 rounded-xl transition-all active:scale-90"
+            className="p-1.5 sm:p-2 text-rose-600 hover:bg-rose-100/80 rounded-xl transition-all active:scale-90"
             title="Excluir"
           >
-            <Trash2 size={22} />
+            <Trash2 size={18} />
           </button>
         </div>
       </div>
