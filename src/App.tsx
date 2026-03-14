@@ -382,7 +382,7 @@ export default function App() {
                 <p className="text-slate-500">Aqui está o resumo das suas finanças.</p>
               </header>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <StatCard 
                   label="Saldo Real" 
                   value={totalBalance} 
@@ -411,12 +411,12 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-100">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-lg font-semibold">Últimas Transações</h3>
                     <button onClick={() => setActiveTab('transactions')} className="text-sm text-emerald-600 font-medium hover:underline">Ver todas</button>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {transactions.slice(0, 5).map(t => (
                       <TransactionItem 
                         key={t.id} 
@@ -433,28 +433,28 @@ export default function App() {
                   </div>
                 </section>
 
-                <section className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-100">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-lg font-semibold">Meus Bancos</h3>
                     <button onClick={() => setIsBankModalOpen(true)} className="text-sm text-emerald-600 font-medium hover:underline">Adicionar</button>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {banks.map(bank => (
-                      <div key={bank.id} className="group flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:shadow-md transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-600 border border-slate-200">
+                      <div key={bank.id} className="group flex items-center justify-between p-3 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:shadow-md transition-all">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-600 border border-slate-200 shrink-0">
                             <Wallet size={18} />
                           </div>
-                          <div>
-                            <p className="font-medium">{bank.name}</p>
-                            <p className="text-xs text-slate-500">Saldo disponível</p>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{bank.name}</p>
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Saldo disponível</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <p className={cn("font-bold", bank.balance >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                          <p className={cn("font-bold text-sm sm:text-base", bank.balance >= 0 ? "text-emerald-600" : "text-rose-600")}>
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(bank.balance)}
                           </p>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
                             <button 
                               onClick={() => {
                                 setEditingBank(bank);
@@ -869,8 +869,8 @@ function NavItem({ active, onClick, icon, label }: { active: boolean, onClick: (
     <button 
       onClick={onClick}
       className={cn(
-        "flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl transition-all w-full",
-        active ? "text-emerald-600 bg-emerald-50 md:bg-emerald-50" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+        "flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-2 md:px-4 md:py-3 rounded-xl transition-all flex-1 md:flex-none md:w-full",
+        active ? "text-emerald-600 bg-emerald-50" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
       )}
     >
       {icon}
@@ -885,9 +885,9 @@ function StatCard({ label, value, icon, color, sublabel }: { label: string, valu
       <div className={cn("w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0", color)}>
         {React.cloneElement(icon as React.ReactElement, { size: 24 })}
       </div>
-      <div className="min-w-0">
-        <p className="text-xs sm:text-sm font-semibold text-slate-500 truncate uppercase tracking-wider">{label}</p>
-        <p className="text-lg sm:text-2xl font-black tracking-tight truncate text-slate-900">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
+        <p className="text-lg sm:text-2xl font-black tracking-tight text-slate-900 break-all sm:break-normal">
           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
         </p>
         {sublabel && <p className="text-[10px] text-slate-400 font-bold mt-0.5">{sublabel}</p>}
@@ -905,7 +905,7 @@ interface TransactionItemProps {
 
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete, onConfirm, onEdit }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-2 rounded-2xl hover:bg-slate-50/80 transition-all group border border-transparent hover:border-slate-100">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 sm:p-4 rounded-2xl hover:bg-slate-50/80 transition-all group border border-transparent hover:border-slate-100">
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className={cn(
           "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 relative shadow-sm transition-transform group-hover:scale-105",
@@ -919,23 +919,23 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-black text-slate-800 truncate text-base sm:text-lg tracking-tight">{transaction.description}</p>
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <p className="font-black text-slate-800 text-base sm:text-lg tracking-tight leading-tight">{transaction.description}</p>
             {transaction.status === 'pending' && (
               <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest whitespace-nowrap border border-amber-200">Pendente</span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mt-0.5">
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400">
             <span className="whitespace-nowrap">{format(parseISO(transaction.date), 'dd MMM yyyy', { locale: ptBR })}</span>
             <span className="text-slate-200">•</span>
-            <span className="flex items-center gap-1.5 truncate">
+            <span className="flex items-center gap-1.5 truncate max-w-[100px] sm:max-w-none">
               <Wallet size={12} className="shrink-0 opacity-60" /> 
               <span className="truncate">{transaction.bank_name || 'Sem banco'}</span>
             </span>
             {transaction.category_name && (
               <>
                 <span className="text-slate-200">•</span>
-                <span className="flex items-center gap-1.5 truncate">
+                <span className="flex items-center gap-1.5 truncate max-w-[100px] sm:max-w-none">
                   <Tags size={12} className="shrink-0 opacity-60" /> 
                   <span className="truncate">{transaction.category_name}</span>
                 </span>
@@ -946,7 +946,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete
                 <span className="text-slate-200">•</span>
                 <span className="flex items-center gap-1.5 text-indigo-500">
                   <Repeat size={12} className="shrink-0" /> 
-                  <span>Recorrente</span>
+                  <span className="hidden sm:inline">Recorrente</span>
                 </span>
               </>
             )}
@@ -954,13 +954,15 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete
         </div>
       </div>
       
-      <div className="flex items-center justify-between sm:justify-end gap-4 pl-16 sm:pl-0">
-        <p className={cn(
-          "text-xl sm:text-2xl font-black whitespace-nowrap tracking-tighter",
-          transaction.type === 'income' ? "text-emerald-600" : "text-rose-600"
-        )}>
-          {transaction.type === 'income' ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount)}
-        </p>
+      <div className="flex items-center justify-between sm:justify-end gap-4 sm:pl-0 w-full sm:w-auto">
+        <div className="text-left sm:text-right flex-1 sm:flex-none">
+          <p className={cn(
+            "text-lg sm:text-2xl font-black whitespace-nowrap tracking-tighter",
+            transaction.type === 'income' ? "text-emerald-600" : "text-rose-600"
+          )}>
+            {transaction.type === 'income' ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount)}
+          </p>
+        </div>
         
         <div className="flex items-center gap-1 bg-slate-100/50 sm:bg-transparent p-1 sm:p-0 rounded-2xl border border-slate-200/50 sm:border-transparent">
           {transaction.status === 'pending' && (
