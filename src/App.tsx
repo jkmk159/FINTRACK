@@ -887,7 +887,7 @@ function StatCard({ label, value, icon, color, sublabel }: { label: string, valu
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-        <p className="text-base sm:text-2xl font-black tracking-tight text-slate-900">
+        <p className="text-base sm:text-2xl font-black tracking-tight text-slate-900 truncate">
           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
         </p>
         {sublabel && <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold mt-0.5">{sublabel}</p>}
@@ -953,7 +953,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onDelete
           {transaction.type === 'income' ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount)}
         </p>
         
-        <div className="flex items-center gap-0.5 sm:gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           {transaction.status === 'pending' && (
             <button 
               onClick={(e) => {
